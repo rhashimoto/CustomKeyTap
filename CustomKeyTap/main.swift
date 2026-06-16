@@ -4,6 +4,9 @@ import CoreGraphics
 // Global boot time reference to align event.timestamp (monotonic) with calendar date
 let bootTime = Date().addingTimeInterval(-ProcessInfo.processInfo.systemUptime)
 
+// Tag for injected events to bypass processing.
+let injectedEventTag: Int64 = 0xDEADBEEF
+
 // Helper to convert CGEventType to String
 func eventTypeToString(_ type: CGEventType) -> String {
     switch type {
@@ -103,15 +106,19 @@ func myEventTapCallback(proxy: CGEventTapProxy, type: CGEventType, event: CGEven
     print("\(timestampStr)|\(eventTypeStr)|keyCode:\(keyCode), flags:0x\(String(flags, radix: 16)), userData:\(userData)")
     fflush(stdout)
     
-    guard let refcon = refcon else {
-        return Unmanaged.passRetained(event)
+    // Skip events we injected.
+    if userData == injectedEventTag {
+      return Unmanaged.passRetained(event)
     }
-    let processor = Unmanaged<KeyEventProcessor>.fromOpaque(refcon).takeUnretainedValue()
+  
+    let processor = Unmanaged<KeyEventProcessor>.fromOpaque(refcon!).takeUnretainedValue()
     let post: (CGEvent) -> Void = { eventToPost in
-        eventToPost.tapPostEvent(proxy)
+      // Tag the event as injected before posting.
+      eventToPost.setIntegerValueField(.eventSourceUserData, value: injectedEventTag)
+      eventToPost.tapPostEvent(proxy)
     }
     guard let result = processor.handleEvent(event, post: post) else {
-        return nil
+      return nil
     }
     return Unmanaged.passRetained(result)
 }

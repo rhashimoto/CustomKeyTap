@@ -1,6 +1,9 @@
 import Foundation
 import CoreGraphics
 
+// Global boot time reference to align event.timestamp (monotonic) with calendar date
+let bootTime = Date().addingTimeInterval(-ProcessInfo.processInfo.systemUptime)
+
 // Helper to convert CGEventType to String
 func eventTypeToString(_ type: CGEventType) -> String {
     switch type {
@@ -27,17 +30,18 @@ func stringToEventType(_ str: String) -> CGEventType? {
     }
 }
 
-// Deserialization function producing numeric timestamp and CGEvent
-func deserializeLogLine(_ line: String) -> (timestamp: Int64, event: CGEvent)? {
+// Deserialization function producing a CGEvent with its timestamp set
+func deserializeLogLine(_ line: String) -> CGEvent? {
     let components = line.split(separator: "|")
     guard components.count >= 3 else { return nil }
     
-    // 1. Parse timestamp to milliseconds since UNIX epoch
+    // 1. Parse timestamp (ISO 8601 with milliseconds) and convert to nanoseconds
     let isoString = String(components[0])
-    let formatter = ISO8601DateFormatter()
-    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    let formatter = DateFormatter()
+    formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSZZZZZ"
+    formatter.locale = Locale(identifier: "en_US_POSIX")
     guard let date = formatter.date(from: isoString) else { return nil }
-    let timestamp = Int64(date.timeIntervalSince1970 * 1000)
+    let timestampNs = UInt64(date.timeIntervalSince1970 * 1_000_000_000)
     
     // 2. Parse event type
     let eventTypeStr = String(components[1])
@@ -68,19 +72,21 @@ func deserializeLogLine(_ line: String) -> (timestamp: Int64, event: CGEvent)? {
     event.type = eventType
     event.flags = CGEventFlags(rawValue: flagsVal)
     event.setIntegerValueField(.keyboardEventKeycode, value: keyCodeVal)
+    event.timestamp = timestampNs
     
-    return (timestamp, event)
+    return event
 }
 
 // Event tap callback
 func myEventTapCallback(proxy: CGEventTapProxy, type: CGEventType, event: CGEvent, refcon: UnsafeMutableRawPointer?) -> Unmanaged<CGEvent>? {
-    let date = Date()
+    let eventTimestampNs = event.timestamp
+    let eventDate = bootTime.addingTimeInterval(Double(eventTimestampNs) / 1_000_000_000.0)
     
-    // Format timestamp in ISO8601 with milliseconds and local timezone
-    let formatter = ISO8601DateFormatter()
-    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    let formatter = DateFormatter()
+    formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSZZZZZ"
+    formatter.locale = Locale(identifier: "en_US_POSIX")
     formatter.timeZone = TimeZone.current
-    let timestampStr = formatter.string(from: date)
+    let timestampStr = formatter.string(from: eventDate)
     
     let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
     let flags = event.flags.rawValue
@@ -96,13 +102,13 @@ func main() {
     print("--- Keyboard Event Tap Logger Startup ---")
     
     // Self-test for deserialization function
-    let testLine = "2026-06-16T10:06:05.123-07:00|keyDown|keyCode:49, flags:0x0"
-    if let deserialized = deserializeLogLine(testLine) {
+    let testLine = "2026-06-16T11:05:26.123-07:00|keyDown|keyCode:49, flags:0x0"
+    if let deserializedEvent = deserializeLogLine(testLine) {
         print("Deserialization test PASSED:")
-        print("  Parsed Timestamp (ms since epoch): \(deserialized.timestamp)")
-        print("  Parsed Event Type: \(deserialized.event.type.rawValue) (\(eventTypeToString(deserialized.event.type)))")
-        print("  Parsed KeyCode: \(deserialized.event.getIntegerValueField(.keyboardEventKeycode))")
-        print("  Parsed Flags: 0x\(String(deserialized.event.flags.rawValue, radix: 16))")
+        print("  Parsed Timestamp (ns since epoch): \(deserializedEvent.timestamp)")
+        print("  Parsed Event Type: \(deserializedEvent.type.rawValue) (\(eventTypeToString(deserializedEvent.type)))")
+        print("  Parsed KeyCode: \(deserializedEvent.getIntegerValueField(.keyboardEventKeycode))")
+        print("  Parsed Flags: 0x\(String(deserializedEvent.flags.rawValue, radix: 16))")
     } else {
         print("Deserialization test FAILED")
     }

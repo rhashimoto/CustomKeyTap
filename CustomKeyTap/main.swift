@@ -103,7 +103,17 @@ func myEventTapCallback(proxy: CGEventTapProxy, type: CGEventType, event: CGEven
     print("\(timestampStr)|\(eventTypeStr)|keyCode:\(keyCode), flags:0x\(String(flags, radix: 16)), userData:\(userData)")
     fflush(stdout)
     
-    return Unmanaged.passRetained(event)
+    guard let refcon = refcon else {
+        return Unmanaged.passRetained(event)
+    }
+    let processor = Unmanaged<KeyEventProcessor>.fromOpaque(refcon).takeUnretainedValue()
+    let post: (CGEvent) -> Void = { eventToPost in
+        eventToPost.tapPostEvent(proxy)
+    }
+    guard let result = processor.handleEvent(event, post: post) else {
+        return nil
+    }
+    return Unmanaged.passRetained(result)
 }
 
 func main() {
@@ -127,13 +137,16 @@ func main() {
                     (1 << CGEventType.keyUp.rawValue) |
                     (1 << CGEventType.flagsChanged.rawValue)
     
+    let processor = KeyEventProcessor()
+    let processorPtr = Unmanaged.passUnretained(processor).toOpaque()
+    
     guard let eventTap = CGEvent.tapCreate(
         tap: .cgSessionEventTap,
         place: .headInsertEventTap,
         options: .defaultTap,
         eventsOfInterest: CGEventMask(eventMask),
         callback: myEventTapCallback,
-        userInfo: nil
+        userInfo: processorPtr
     ) else {
         print("Error: Failed to create event tap.")
         print("IMPORTANT: This app requires Accessibility permissions to capture global keyboard events.")

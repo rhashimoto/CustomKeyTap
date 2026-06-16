@@ -60,7 +60,14 @@ func deserializeLogLine(_ line: String) -> CGEvent? {
     
     // Parse flags
     guard let flagsRange = detailsStr.range(of: "flags:0x") else { return nil }
-    let flagsStr = detailsStr[flagsRange.upperBound..<detailsStr.endIndex].trimmingCharacters(in: .whitespaces)
+    // Flags are bounded by the end of the flags:0x prefix up to either the next comma (before userData) or the end of the string
+    let searchStart = flagsRange.upperBound
+    let flagsStr: String
+    if let commaAfterFlags = detailsStr.range(of: ",", range: searchStart..<detailsStr.endIndex) {
+        flagsStr = detailsStr[searchStart..<commaAfterFlags.lowerBound].trimmingCharacters(in: .whitespaces)
+    } else {
+        flagsStr = detailsStr[searchStart..<detailsStr.endIndex].trimmingCharacters(in: .whitespaces)
+    }
     guard let flagsVal = UInt64(flagsStr, radix: 16) else { return nil }
     
     // 4. Recreate CGEvent
@@ -90,9 +97,10 @@ func myEventTapCallback(proxy: CGEventTapProxy, type: CGEventType, event: CGEven
     
     let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
     let flags = event.flags.rawValue
+    let userData = event.getIntegerValueField(.eventSourceUserData)
     
     let eventTypeStr = eventTypeToString(type)
-    print("\(timestampStr)|\(eventTypeStr)|keyCode:\(keyCode), flags:0x\(String(flags, radix: 16))")
+    print("\(timestampStr)|\(eventTypeStr)|keyCode:\(keyCode), flags:0x\(String(flags, radix: 16)), userData:\(userData)")
     fflush(stdout)
     
     return Unmanaged.passRetained(event)
@@ -101,8 +109,8 @@ func myEventTapCallback(proxy: CGEventTapProxy, type: CGEventType, event: CGEven
 func main() {
     print("--- Keyboard Event Tap Logger Startup ---")
     
-    // Self-test for deserialization function
-    let testLine = "2026-06-16T11:05:26.123-07:00|keyDown|keyCode:49, flags:0x0"
+    // Self-test for deserialization function (including userData in the string)
+    let testLine = "2026-06-16T11:05:26.123-07:00|keyDown|keyCode:49, flags:0x0, userData:42"
     if let deserializedEvent = deserializeLogLine(testLine) {
         print("Deserialization test PASSED:")
         print("  Parsed Timestamp (ns since epoch): \(deserializedEvent.timestamp)")

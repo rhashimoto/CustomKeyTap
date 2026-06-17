@@ -150,7 +150,7 @@ func eventTypeToString(_ type: CGEventType) -> String {
   case .keyDown: return "keyDown"
   case .keyUp: return "keyUp"
   case .flagsChanged: return "flagsChanged"
-  @unknown default: return "unknown(\(type.rawValue))"
+  default: return "unknown(\(type.rawValue))"
   }
 }
 

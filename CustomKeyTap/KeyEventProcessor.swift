@@ -27,6 +27,7 @@ let homeRowKeys: [Int64: HomeRowModifier] = [
 
 class KeyEventProcessor {
   var lastTapTime: UInt64 = 0
+  var pressed: [Int64: KeyPress] = [:]
   let post: (CGEvent) -> Void
 
   init(post: @escaping (CGEvent) -> Void) {
@@ -34,23 +35,55 @@ class KeyEventProcessor {
   }
 
   func handleEvent(_ event: CGEvent) -> CGEvent? {
-    let type = event.type
-    let timestamp = event.timestamp
     let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
-    let flags = event.flags
+    var outputs: [CGEvent] = []
     
     if event.type == .keyDown {
-      if homeRowKeys.keys.contains(keyCode) {
+      var press = KeyPress(keyCode: keyCode, flags: event.flags, timestamp: event.timestamp)
+      if isFlowTap(event) {
+        press.resolution = .tap
+        lastTapTime = event.timestamp
+      }
+      if isHomeRowKey(keyCode) {
         
       }
-    } else if event.type == .keyUp {
       
+      outputs.append(event)
+      pressed[keyCode] = press
+    } else if event.type == .keyUp {
+      pressed.removeValue(forKey: keyCode)
     }
-    _ = type
-    _ = timestamp
-    _ = keyCode
-    _ = flags
     
+    if outputs.isEmpty { return nil }
+    for output in outputs {
+      if output != event {
+        post(output)
+      }
+    }
     return event
   }
+  
+  func isHomeRowKey(_ keyCode: Int64) -> Bool {
+    return homeRowKeys.keys.contains(keyCode)
+  }
+  
+  func isFlowTap(_ event: CGEvent) -> Bool {
+    assert(event.type == .keyDown)
+    return event.timestamp - lastTapTime < flowTapTerm
+  }
+}
+
+enum KeyResolution {
+  case pending
+  case tap
+  case modifier
+  case layer
+}
+
+struct KeyPress {
+  let keyCode: Int64
+  let flags: CGEventFlags
+  let timestamp: UInt64
+  
+  var resolution: KeyResolution = .pending
 }

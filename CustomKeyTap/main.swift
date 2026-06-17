@@ -112,12 +112,7 @@ func myEventTapCallback(proxy: CGEventTapProxy, type: CGEventType, event: CGEven
   }
   
   let processor = Unmanaged<KeyEventProcessor>.fromOpaque(refcon!).takeUnretainedValue()
-  let post: (CGEvent) -> Void = { eventToPost in
-    // Tag the event as injected before posting.
-    eventToPost.setIntegerValueField(.eventSourceUserData, value: injectedEventTag)
-    eventToPost.tapPostEvent(proxy)
-  }
-  guard let result = processor.handleEvent(event, post: post) else {
+  guard let result = processor.handleEvent(event) else {
     return nil
   }
   return Unmanaged.passRetained(result)
@@ -143,12 +138,18 @@ func main() {
   let eventMask = (1 << CGEventType.keyDown.rawValue) |
   (1 << CGEventType.keyUp.rawValue) |
   (1 << CGEventType.flagsChanged.rawValue)
-  
-  let processor = KeyEventProcessor()
+
+  let tap: CGEventTapLocation = .cgSessionEventTap
+
+  let processor = KeyEventProcessor(post: { eventToPost in
+    // Tag the event as injected before posting.
+    eventToPost.setIntegerValueField(.eventSourceUserData, value: injectedEventTag)
+    eventToPost.post(tap: tap)
+  })
   let processorPtr = Unmanaged.passUnretained(processor).toOpaque()
-  
+
   guard let eventTap = CGEvent.tapCreate(
-    tap: .cgSessionEventTap,
+    tap: tap,
     place: .headInsertEventTap,
     options: .defaultTap,
     eventsOfInterest: CGEventMask(eventMask),

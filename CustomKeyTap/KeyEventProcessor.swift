@@ -11,17 +11,58 @@ let flowTapTerm: UInt64 = 100 * 1_000_000
 struct HomeRowConfig {
   // CGEventFlags for a modifier.
   let flags: UInt64
+  
+  init(_ flags: CGEventFlags) {
+    self.flags = flags.rawValue
+  }
 }
 
 // Mapping from the home row keycode to its associated modifier.
 let homeRowConfigs: [Int64: HomeRowConfig] = [
-//  Int64(kVK_ANSI_Q): HomeRowConfig(flags: CGEventFlags.maskShift.rawValue),
-  Int64(kVK_ANSI_S): HomeRowConfig(flags: CGEventFlags.maskCommand.rawValue),
-  Int64(kVK_ANSI_D): HomeRowConfig(flags: CGEventFlags.maskAlternate.rawValue),
-  Int64(kVK_ANSI_F): HomeRowConfig(flags: CGEventFlags.maskControl.rawValue),
-  Int64(kVK_ANSI_J): HomeRowConfig(flags: CGEventFlags.maskControl.rawValue),
-  Int64(kVK_ANSI_K): HomeRowConfig(flags: CGEventFlags.maskAlternate.rawValue),
-  Int64(kVK_ANSI_L): HomeRowConfig(flags: CGEventFlags.maskCommand.rawValue),
+//  Int64(kVK_ANSI_Q): HomeRowConfig(.maskShift),
+  Int64(kVK_ANSI_S): HomeRowConfig(.maskCommand),
+  Int64(kVK_ANSI_D): HomeRowConfig(.maskAlternate),
+  Int64(kVK_ANSI_F): HomeRowConfig(.maskControl),
+  Int64(kVK_ANSI_J): HomeRowConfig(.maskControl),
+  Int64(kVK_ANSI_K): HomeRowConfig(.maskAlternate),
+  Int64(kVK_ANSI_L): HomeRowConfig(.maskCommand),
+]
+
+let layerKeyCode = Int64(kVK_Space)
+
+struct LayerKey {
+  let code: Int64
+  let flags: UInt64
+  
+  init(_ virtualKeyCode: Int, _ flags: CGEventFlags) {
+    self.code = Int64(virtualKeyCode)
+    self.flags = flags.rawValue
+  }
+}
+
+let layerKeys: [Int64: LayerKey] = [
+  Int64(kVK_ANSI_Z): LayerKey(kVK_ANSI_Z, CGEventFlags.maskCommand),
+  Int64(kVK_ANSI_X): LayerKey(kVK_ANSI_X, CGEventFlags.maskCommand),
+  Int64(kVK_ANSI_C): LayerKey(kVK_ANSI_C, CGEventFlags.maskCommand),
+  Int64(kVK_ANSI_V): LayerKey(kVK_ANSI_V, CGEventFlags.maskCommand),
+  
+  // Navigation keys
+  Int64(kVK_ANSI_Q): LayerKey(kVK_Home, CGEventFlags()),
+  Int64(kVK_ANSI_W): LayerKey(kVK_PageUp, CGEventFlags()),
+  Int64(kVK_ANSI_E): LayerKey(kVK_PageDown, CGEventFlags()),
+  Int64(kVK_ANSI_R): LayerKey(kVK_End, CGEventFlags()),
+
+  // Vim navigation
+  Int64(kVK_ANSI_H): LayerKey(kVK_LeftArrow, CGEventFlags()),
+  Int64(kVK_ANSI_J): LayerKey(kVK_DownArrow, CGEventFlags()),
+  Int64(kVK_ANSI_K): LayerKey(kVK_UpArrow, CGEventFlags()),
+  Int64(kVK_ANSI_L): LayerKey(kVK_RightArrow, CGEventFlags()),
+  
+  // Emacs line navigation
+  Int64(kVK_ANSI_A): LayerKey(kVK_ANSI_A, CGEventFlags.maskControl),
+  Int64(kVK_ANSI_S): LayerKey(kVK_ANSI_B, CGEventFlags.maskAlternate),
+  Int64(kVK_ANSI_D): LayerKey(kVK_ANSI_F, CGEventFlags.maskAlternate),
+  Int64(kVK_ANSI_F): LayerKey(kVK_ANSI_E, CGEventFlags.maskControl),
 ]
 
 class KeyEventProcessor {
@@ -67,8 +108,8 @@ class KeyEventProcessor {
         pending[keyCode] = press
       }
     } else if event.type == .keyUp {
-      // A key release resolves all pending key actions. A pending press
-      // before the key was pressed is a hold, otherwise a tap
+      // A keyUp event resolves all pending key actions. A pending press
+      // before the key was pressed is a hold, otherwise it is a tap.
       if let keyPress = pending[keyCode] ?? pressed[keyCode] {
         for (pendingCode, var pendingPress) in pending {
           if pendingPress.event.timestamp < keyPress.event.timestamp {
@@ -84,7 +125,6 @@ class KeyEventProcessor {
       return event
     }
     
-    print("pressed \(pressed)")
     if pending.isEmpty {
       // Process pressed keys in the order they were pressed to build
       // the modifier and layer state for taps.
@@ -92,20 +132,16 @@ class KeyEventProcessor {
       for (pressCode, press) in pressed.sorted(by: { $0.value.event.timestamp < $1.value.event.timestamp }) {
         if press.action == .modifier {
           flags |= press.flags
-        } else if press.action == .layer {
-          // TODO
         } else if !press.posted {
-          // Generate key tap press and release.
-          for isDown in [true, false] {
+          if press.action == .layer, let layerKey = layerKeys[pressCode] {
+            postTap(
+              keyCode: layerKey.code,
+              flags: press.event.flags.rawValue | layerKey.flags | flags)
+          } else {
             // Use flags from the original event, plus our modifiers.
-            let syntheticEvent = CGEvent(
-              keyboardEventSource: nil,
-              virtualKey: CGKeyCode(press.code >= 0 ? press.code : pressCode),
-              keyDown: isDown)!
-            syntheticEvent.flags = press.event.flags
-            syntheticEvent.flags.insert(CGEventFlags(rawValue: press.flags))
-            syntheticEvent.flags.insert(CGEventFlags(rawValue: flags))
-            post(syntheticEvent)
+            postTap(
+              keyCode: pressCode,
+              flags: press.event.flags.rawValue | flags)
           }
           pressed[pressCode]?.posted = true
         }
@@ -132,7 +168,8 @@ class KeyEventProcessor {
   }
   
   func isTapHold(_ keyCode: Int64) -> Bool {
-    return homeRowConfigs.keys.contains(keyCode)
+    return keyCode == layerKeyCode
+      || homeRowConfigs.keys.contains(keyCode)
   }
   
   func isFlowTap(_ event: CGEvent) -> Bool {
@@ -140,6 +177,18 @@ class KeyEventProcessor {
     return event.timestamp - lastTapTime < flowTapTerm
   }
   
+  func postTap(keyCode: Int64, flags: UInt64) {
+    // Generate key tap press and release.
+    for isDown in [true, false] {
+      let syntheticEvent = CGEvent(
+        keyboardEventSource: nil,
+        virtualKey: CGKeyCode(keyCode),
+        keyDown: isDown)!
+      syntheticEvent.flags = CGEventFlags(rawValue: flags)
+      post(syntheticEvent)
+    }
+  }
+
   func isRepeatedTap(_ keyCode: Int64, _ event: CGEvent) -> Bool {
     assert(event.type == .keyDown)
     if let press = pressed[keyCode] {
@@ -158,7 +207,6 @@ enum KeyAction {
 struct KeyPress {
   let event: CGEvent
   var action: KeyAction = .tap
-  var code: Int64 = -1
   var flags: UInt64 = 0
   var posted = false
 }

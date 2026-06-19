@@ -2,12 +2,6 @@ import Foundation
 import CoreGraphics
 import Carbon
 
-let tapTerm : UInt64 = 235 * 1_000_000
-
-// Any keypress less than this many nanoseconds after the last tap
-// is another tap, not a hold.
-let flowTapTerm: UInt64 = 100 * 1_000_000
-
 struct HomeRowConfig {
   // CGEventFlags for a modifier.
   let flags: UInt64
@@ -114,6 +108,12 @@ let capsWordNeutral: Set<Int64> = [
 ]
   
 class KeyEventProcessor {
+  var holdNanos: UInt64 = 235 * 1_000_000
+
+  // Any keypress less than this many nanoseconds after the last tap
+  // is another tap, not a hold.
+  var flowNanos: UInt64 = 100 * 1_000_000
+
   var lastTapTime: UInt64 = 0
   var pending: [Int64: KeyPress] = [:]
   var pressed: [Int64: KeyPress] = [:]
@@ -125,12 +125,20 @@ class KeyEventProcessor {
     self.post = post
   }
   
+  func setHoldMillis(millis: Int) {
+    holdNanos = UInt64(millis) * 1_000_000
+  }
+  
+  func setFlowMillis(millis: Int) {
+    flowNanos = UInt64(millis) * 1_000_000
+  }
+  
   func handleEvent(_ event: CGEvent) -> CGEvent? {
     let eventCode = event.getIntegerValueField(.keyboardEventKeycode)
     
     // Check whether enough time has passed to establish holds.
     for (pressCode, var press) in pending {
-      if event.timestamp - press.event.timestamp > tapTerm {
+      if event.timestamp - press.event.timestamp > holdNanos {
         resolvePendingHold(pressCode, &press)
       }
     }
@@ -227,7 +235,7 @@ class KeyEventProcessor {
   
   func isFlowTap(_ event: CGEvent) -> Bool {
     assert(event.type == .keyDown)
-    return event.timestamp - lastTapTime < flowTapTerm
+    return event.timestamp - lastTapTime < flowNanos
   }
   
   func postTap(keyCode: Int64, flags: UInt64) {

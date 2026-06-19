@@ -23,9 +23,23 @@ func myEventTapCallback(proxy: CGEventTapProxy, type: CGEventType, event: CGEven
   return Unmanaged.passRetained(result)
 }
 
+func parseMillisOption(_ name: String, _ args: [String]) -> Int? {
+  guard let index = args.firstIndex(of: name) else { return nil }
+  let valueIndex = index + 1
+  guard valueIndex < args.count, let value = Int(args[valueIndex]) else {
+    print("Error: \(name) requires an integer millisecond value.")
+    exit(1)
+  }
+  return value
+}
+
 func main() {
   print("Starting event tap...")
-  
+
+  let args = Array(CommandLine.arguments.dropFirst())
+  let holdMillis = parseMillisOption("--hold", args)
+  let flowMillis = parseMillisOption("--flow", args)
+
   let eventMask = (1 << CGEventType.keyDown.rawValue) |
   (1 << CGEventType.keyUp.rawValue) |
   (1 << CGEventType.flagsChanged.rawValue)
@@ -37,6 +51,12 @@ func main() {
     eventToPost.setIntegerValueField(.eventSourceUserData, value: postedEventTag)
     eventToPost.post(tap: tap)
   })
+  if let holdMillis {
+    processor.setHoldMillis(millis: holdMillis)
+  }
+  if let flowMillis {
+    processor.setFlowMillis(millis: flowMillis)
+  }
   let processorPtr = Unmanaged.passUnretained(processor).toOpaque()
 
   guard let eventTap = CGEvent.tapCreate(

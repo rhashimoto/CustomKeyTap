@@ -19,7 +19,6 @@ struct HomeRowConfig {
 
 // Mapping from the home row keycode to its associated modifier.
 let homeRowConfigs: [Int64: HomeRowConfig] = [
-//  Int64(kVK_ANSI_Q): HomeRowConfig(.maskShift),
   Int64(kVK_ANSI_S): HomeRowConfig(.maskCommand),
   Int64(kVK_ANSI_D): HomeRowConfig(.maskAlternate),
   Int64(kVK_ANSI_F): HomeRowConfig(.maskControl),
@@ -99,12 +98,9 @@ class KeyEventProcessor {
         pressed[keyCode] = press
       } else {
         // Defer until we can distinguish tap or hold behavior.
-        if let homeRowConfig = homeRowConfigs[keyCode] {
-          press.action = .modifier
-          press.flags = homeRowConfig.flags
-        } else {
-          press.action = .layer
-        }
+        press.action = homeRowConfigs.keys.contains(keyCode) ?
+          .modifier :
+          .layer
         pending[keyCode] = press
       }
     } else if event.type == .keyUp {
@@ -131,7 +127,7 @@ class KeyEventProcessor {
       var flags: UInt64 = 0
       for (pressCode, press) in pressed.sorted(by: { $0.value.event.timestamp < $1.value.event.timestamp }) {
         if press.action == .modifier {
-          flags |= press.flags
+          flags |= homeRowConfigs[pressCode]!.flags
         } else if !press.posted {
           if press.action == .layer, let layerKey = layerKeys[pressCode] {
             postTap(
@@ -162,7 +158,6 @@ class KeyEventProcessor {
   
   func resolvePendingTap(_ keyCode: Int64, _ press: inout KeyPress) {
     press.action = .tap
-    press.flags = 0
     pressed[keyCode] = press
     pending.removeValue(forKey: keyCode)
   }
@@ -207,6 +202,5 @@ enum KeyAction {
 struct KeyPress {
   let event: CGEvent
   var action: KeyAction = .tap
-  var flags: UInt64 = 0
   var posted = false
 }

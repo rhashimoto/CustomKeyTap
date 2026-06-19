@@ -45,6 +45,7 @@
 			isa = PBXGroup;
 			children = (
 				B01608A92FE0B2AE00DC870E /* CustomKeyTap */,
+				B0E546582FE49FDF00D512CA /* Frameworks */,
 				B01608A82FE0B2AE00DC870E /* Products */,
 			);
 			sourceTree = "<group>";
@@ -55,6 +56,13 @@
 				B01608A72FE0B2AE00DC870E /* CustomKeyTap */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		B0E546582FE49FDF00D512CA /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -106,6 +114,8 @@
 			);
 			mainGroup = B016089E2FE0B2AE00DC870E;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = B01608A82FE0B2AE00DC870E /* Products */;
 			projectDirPath = "";

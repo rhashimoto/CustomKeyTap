@@ -15,13 +15,13 @@ struct HomeRowConfig {
 
 // Mapping from the home row keycode to its associated modifier.
 let homeRowConfigs: [Int64: HomeRowConfig] = [
-  Int64(kVK_ANSI_Q): HomeRowConfig(flags: CGEventFlags.maskShift.rawValue),
-//   1: HomeRowModifier(modKeyCode: 55, modFlags: CGEventFlags.maskCommand.rawValue   | 0x0008), // S command
-//   2: HomeRowModifier(modKeyCode: 58, modFlags: CGEventFlags.maskAlternate.rawValue | 0x0020), // D alt
-//   3: HomeRowModifier(modKeyCode: 59, modFlags: CGEventFlags.maskControl.rawValue   | 0x0001), // F control
-//  38: HomeRowModifier(modKeyCode: 62, modFlags: CGEventFlags.maskControl.rawValue   | 0x2000), // J control
-//  40: HomeRowModifier(modKeyCode: 61, modFlags: CGEventFlags.maskAlternate.rawValue | 0x0040), // K alt
-//  37: HomeRowModifier(modKeyCode: 54, modFlags: CGEventFlags.maskCommand.rawValue   | 0x0010), // L command
+//  Int64(kVK_ANSI_Q): HomeRowConfig(flags: CGEventFlags.maskShift.rawValue),
+  Int64(kVK_ANSI_S): HomeRowConfig(flags: CGEventFlags.maskCommand.rawValue),
+  Int64(kVK_ANSI_D): HomeRowConfig(flags: CGEventFlags.maskAlternate.rawValue),
+  Int64(kVK_ANSI_F): HomeRowConfig(flags: CGEventFlags.maskControl.rawValue),
+  Int64(kVK_ANSI_J): HomeRowConfig(flags: CGEventFlags.maskControl.rawValue),
+  Int64(kVK_ANSI_K): HomeRowConfig(flags: CGEventFlags.maskAlternate.rawValue),
+  Int64(kVK_ANSI_L): HomeRowConfig(flags: CGEventFlags.maskCommand.rawValue),
 ]
 
 class KeyEventProcessor {
@@ -86,6 +86,8 @@ class KeyEventProcessor {
     
     print("pressed \(pressed)")
     if pending.isEmpty {
+      // Process pressed keys in the order they were pressed to build
+      // the modifier and layer state for taps.
       var flags: UInt64 = 0
       for (pressCode, press) in pressed.sorted(by: { $0.value.event.timestamp < $1.value.event.timestamp }) {
         if press.action == .modifier {
@@ -93,13 +95,15 @@ class KeyEventProcessor {
         } else if press.action == .layer {
           // TODO
         } else if !press.posted {
-          // Generate 
+          // Generate key tap press and release.
           for isDown in [true, false] {
+            // Use flags from the original event, plus our modifiers.
             let syntheticEvent = CGEvent(
               keyboardEventSource: nil,
-              virtualKey: CGKeyCode(pressCode),
+              virtualKey: CGKeyCode(press.code >= 0 ? press.code : pressCode),
               keyDown: isDown)!
-            syntheticEvent.flags = (press.event.flags)
+            syntheticEvent.flags = press.event.flags
+            syntheticEvent.flags.insert(CGEventFlags(rawValue: press.flags))
             syntheticEvent.flags.insert(CGEventFlags(rawValue: flags))
             post(syntheticEvent)
           }

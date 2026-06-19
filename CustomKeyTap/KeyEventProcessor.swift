@@ -62,51 +62,101 @@ let layerKeys: [Int64: LayerKey] = [
   Int64(kVK_ANSI_S): LayerKey(kVK_ANSI_B, CGEventFlags.maskAlternate),
   Int64(kVK_ANSI_D): LayerKey(kVK_ANSI_F, CGEventFlags.maskAlternate),
   Int64(kVK_ANSI_F): LayerKey(kVK_ANSI_E, CGEventFlags.maskControl),
+  
+  // Caps lock. This entry is only used as a marker. It does
+  // not produce key events.
+  Int64(kVK_CapsLock): LayerKey(kVK_CapsLock, CGEventFlags()),
 ]
 
+let capsWordKeyCode = Int64(kVK_Delete)
+let capsWordTargets: Set<Int64> = [
+  Int64(kVK_ANSI_A),
+  Int64(kVK_ANSI_B),
+  Int64(kVK_ANSI_C),
+  Int64(kVK_ANSI_D),
+  Int64(kVK_ANSI_E),
+  Int64(kVK_ANSI_F),
+  Int64(kVK_ANSI_G),
+  Int64(kVK_ANSI_H),
+  Int64(kVK_ANSI_I),
+  Int64(kVK_ANSI_J),
+  Int64(kVK_ANSI_K),
+  Int64(kVK_ANSI_L),
+  Int64(kVK_ANSI_M),
+  Int64(kVK_ANSI_N),
+  Int64(kVK_ANSI_O),
+  Int64(kVK_ANSI_P),
+  Int64(kVK_ANSI_Q),
+  Int64(kVK_ANSI_R),
+  Int64(kVK_ANSI_S),
+  Int64(kVK_ANSI_T),
+  Int64(kVK_ANSI_U),
+  Int64(kVK_ANSI_V),
+  Int64(kVK_ANSI_W),
+  Int64(kVK_ANSI_X),
+  Int64(kVK_ANSI_Y),
+  Int64(kVK_ANSI_Z),
+  Int64(kVK_ANSI_Minus)
+]
+let capsWordNeutral: Set<Int64> = [
+  Int64(kVK_ANSI_0),
+  Int64(kVK_ANSI_1),
+  Int64(kVK_ANSI_2),
+  Int64(kVK_ANSI_3),
+  Int64(kVK_ANSI_4),
+  Int64(kVK_ANSI_5),
+  Int64(kVK_ANSI_6),
+  Int64(kVK_ANSI_7),
+  Int64(kVK_ANSI_8),
+  Int64(kVK_ANSI_9),
+  Int64(kVK_Delete),
+  Int64(kVK_ForwardDelete)
+]
+  
 class KeyEventProcessor {
   var lastTapTime: UInt64 = 0
   var pending: [Int64: KeyPress] = [:]
   var pressed: [Int64: KeyPress] = [:]
-  var shift = false
   let post: (CGEvent) -> Void
+
+  var isCapsWordActive: Bool = false
   
   init(post: @escaping (CGEvent) -> Void) {
     self.post = post
   }
   
   func handleEvent(_ event: CGEvent) -> CGEvent? {
-    let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
+    let eventCode = event.getIntegerValueField(.keyboardEventKeycode)
     
     // Check whether enough time has passed to establish holds.
-    for (pressKeyCode, var press) in pending {
+    for (pressCode, var press) in pending {
       if event.timestamp - press.event.timestamp > tapTerm {
-        resolvePendingHold(pressKeyCode, &press)
+        resolvePendingHold(pressCode, &press)
       }
     }
     
     if event.type == .keyDown {
       var press = KeyPress(event: event)
-      if pending.keys.contains(keyCode) ||
-         pressed[keyCode]?.action == .modifier ||
-         pressed[keyCode]?.action == .layer {
+      if pending.keys.contains(eventCode) ||
+         pressed[eventCode]?.action == .modifier ||
+         pressed[eventCode]?.action == .layer {
         // Ignore key repeat for possible modifier/layer holds.
-      } else if !isTapHold(keyCode) ||
+      } else if !isTapHold(eventCode) ||
          isFlowTap(event) ||
-         isRepeatedTap(keyCode, event) {
+         isRepeatedTap(eventCode, event) {
         // We can already classify this as a tap.
-        pressed[keyCode] = press
+        pressed[eventCode] = press
       } else {
         // Defer until we can distinguish tap or hold behavior.
-        press.action = homeRowConfigs.keys.contains(keyCode) ?
+        press.action = homeRowConfigs.keys.contains(eventCode) ?
           .modifier :
           .layer
-        pending[keyCode] = press
+        pending[eventCode] = press
       }
     } else if event.type == .keyUp {
       // A keyUp event resolves all pending key actions. A pending press
       // before the key was pressed is a hold, otherwise it is a tap.
-      if let keyPress = pending[keyCode] ?? pressed[keyCode] {
+      if let keyPress = pending[eventCode] ?? pressed[eventCode] {
         for (pendingCode, var pendingPress) in pending {
           if pendingPress.event.timestamp < keyPress.event.timestamp {
             resolvePendingHold(pendingCode, &pendingPress)
@@ -130,9 +180,13 @@ class KeyEventProcessor {
           flags |= homeRowConfigs[pressCode]!.flags
         } else if !press.posted {
           if press.action == .layer, let layerKey = layerKeys[pressCode] {
-            postTap(
-              keyCode: layerKey.code,
-              flags: press.event.flags.rawValue | layerKey.flags | flags)
+            if (layerKey.code == Int64(kVK_CapsLock)) {
+              isCapsWordActive = !isCapsWordActive
+            } else {
+              postTap(
+                keyCode: layerKey.code,
+                flags: press.event.flags.rawValue | layerKey.flags | flags)
+                  }
           } else {
             // Use flags from the original event, plus our modifiers.
             postTap(
@@ -144,8 +198,12 @@ class KeyEventProcessor {
       }
       
       if event.type == .keyUp {
-        pressed.removeValue(forKey: keyCode)
+        pressed.removeValue(forKey: eventCode)
       }
+    }
+    
+    if capsWordTargets.contains(eventCode) || capsWordNeutral.contains(eventCode) {
+      isCapsWordActive = false
     }
     
     return nil
@@ -173,13 +231,17 @@ class KeyEventProcessor {
   }
   
   func postTap(keyCode: Int64, flags: UInt64) {
+    let capsWordFlags = isCapsWordActive && capsWordTargets.contains(keyCode) ?
+      CGEventFlags.maskShift.rawValue :
+      0
+    
     // Generate key tap press and release.
     for isDown in [true, false] {
       let syntheticEvent = CGEvent(
         keyboardEventSource: nil,
         virtualKey: CGKeyCode(keyCode),
         keyDown: isDown)!
-      syntheticEvent.flags = CGEventFlags(rawValue: flags)
+      syntheticEvent.flags = CGEventFlags(rawValue: flags | capsWordFlags)
       post(syntheticEvent)
     }
   }

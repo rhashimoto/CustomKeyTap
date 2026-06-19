@@ -24,20 +24,6 @@ func myEventTapCallback(proxy: CGEventTapProxy, type: CGEventType, event: CGEven
 }
 
 func main() {
-  print("--- Keyboard Event Tap Logger Startup ---")
-  
-  // Self-test for deserialization function (including userData in the string)
-  let testLine = "2026-06-16T11:05:26.123-07:00|keyDown|keyCode:Space(49), flags:0x0, userData:42"
-  if let deserializedEvent = deserializeEvent(testLine) {
-    print("Deserialization test PASSED:")
-    print("  Parsed Timestamp (ns since epoch): \(deserializedEvent.timestamp)")
-    print("  Parsed Event Type: \(deserializedEvent.type.rawValue) (\(eventTypeToString(deserializedEvent.type)))")
-    print("  Parsed KeyCode: \(deserializedEvent.getIntegerValueField(.keyboardEventKeycode))")
-    print("  Parsed Flags: 0x\(String(deserializedEvent.flags.rawValue, radix: 16))")
-  } else {
-    print("Deserialization test FAILED")
-  }
-  
   print("Starting event tap...")
   
   let eventMask = (1 << CGEventType.keyDown.rawValue) |

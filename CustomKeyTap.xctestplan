@@ -1,0 +1,30 @@
+{
+  "configurations" : [
+    {
+      "id" : "DD80E1D7-5FA1-4CE8-A89C-20969B89BA19",
+      "name" : "Test Scheme Action",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "codeCoverage" : false,
+    "performanceAntipatternCheckerEnabled" : true,
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:CustomKeyTap.xcodeproj",
+      "identifier" : "B01608A62FE0B2AE00DC870E",
+      "name" : "CustomKeyTap"
+    }
+  },
+  "testTargets" : [
+    {
+      "target" : {
+        "containerPath" : "container:CustomKeyTap.xcodeproj",
+        "identifier" : "B0E546602FE5B08500D512CA",
+        "name" : "CustomKeyTapTests"
+      }
+    }
+  ],
+  "version" : 1
+}

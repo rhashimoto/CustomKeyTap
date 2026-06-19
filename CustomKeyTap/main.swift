@@ -3,7 +3,7 @@ import CoreGraphics
 import Carbon
 
 // Tag for injected events to bypass processing.
-let injectedEventTag: Int64 = 0xDEADBEEF
+let postedEventTag: Int64 = 0xDEADBEEF
 
 // Event tap callback
 func myEventTapCallback(proxy: CGEventTapProxy, type: CGEventType, event: CGEvent, refcon: UnsafeMutableRawPointer?) -> Unmanaged<CGEvent>? {
@@ -12,7 +12,7 @@ func myEventTapCallback(proxy: CGEventTapProxy, type: CGEventType, event: CGEven
 
   // Skip events we injected.
   let userData = event.getIntegerValueField(.eventSourceUserData)
-  if userData == injectedEventTag {
+  if userData == postedEventTag {
     return Unmanaged.passRetained(event)
   }
 
@@ -48,7 +48,7 @@ func main() {
 
   let processor = KeyEventProcessor(post: { eventToPost in
     // Tag the event as injected before posting.
-    eventToPost.setIntegerValueField(.eventSourceUserData, value: injectedEventTag)
+    eventToPost.setIntegerValueField(.eventSourceUserData, value: postedEventTag)
     eventToPost.post(tap: tap)
   })
   let processorPtr = Unmanaged.passUnretained(processor).toOpaque()

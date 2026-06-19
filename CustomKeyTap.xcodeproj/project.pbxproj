@@ -20,18 +20,45 @@
 
 /* Begin PBXFileReference section */
 		B01608A72FE0B2AE00DC870E /* CustomKeyTap */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = CustomKeyTap; sourceTree = BUILT_PRODUCTS_DIR; };
+		B0E546612FE5B08500D512CA /* CustomKeyTapTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CustomKeyTapTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		B0E546812FE5DC8E00D512CA /* Exceptions for "CustomKeyTap" folder in "CustomKeyTapTests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				KeyEventProcessor.swift,
+				loggingUtils.swift,
+			);
+			target = B0E546602FE5B08500D512CA /* CustomKeyTapTests */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		B01608A92FE0B2AE00DC870E /* CustomKeyTap */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				B0E546812FE5DC8E00D512CA /* Exceptions for "CustomKeyTap" folder in "CustomKeyTapTests" target */,
+			);
 			path = CustomKeyTap;
+			sourceTree = "<group>";
+		};
+		B0E546622FE5B08500D512CA /* CustomKeyTapTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = CustomKeyTapTests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		B01608A42FE0B2AE00DC870E /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B0E5465E2FE5B08500D512CA /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -45,6 +72,7 @@
 			isa = PBXGroup;
 			children = (
 				B01608A92FE0B2AE00DC870E /* CustomKeyTap */,
+				B0E546622FE5B08500D512CA /* CustomKeyTapTests */,
 				B0E546582FE49FDF00D512CA /* Frameworks */,
 				B01608A82FE0B2AE00DC870E /* Products */,
 			);
@@ -54,6 +82,7 @@
 			isa = PBXGroup;
 			children = (
 				B01608A72FE0B2AE00DC870E /* CustomKeyTap */,
+				B0E546612FE5B08500D512CA /* CustomKeyTapTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -90,6 +119,28 @@
 			productReference = B01608A72FE0B2AE00DC870E /* CustomKeyTap */;
 			productType = "com.apple.product-type.tool";
 		};
+		B0E546602FE5B08500D512CA /* CustomKeyTapTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B0E546652FE5B08500D512CA /* Build configuration list for PBXNativeTarget "CustomKeyTapTests" */;
+			buildPhases = (
+				B0E5465D2FE5B08500D512CA /* Sources */,
+				B0E5465E2FE5B08500D512CA /* Frameworks */,
+				B0E5465F2FE5B08500D512CA /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				B0E546622FE5B08500D512CA /* CustomKeyTapTests */,
+			);
+			name = CustomKeyTapTests;
+			packageProductDependencies = (
+			);
+			productName = CustomKeyTapTests;
+			productReference = B0E546612FE5B08500D512CA /* CustomKeyTapTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -101,6 +152,9 @@
 				LastUpgradeCheck = 2650;
 				TargetAttributes = {
 					B01608A62FE0B2AE00DC870E = {
+						CreatedOnToolsVersion = 26.5;
+					};
+					B0E546602FE5B08500D512CA = {
 						CreatedOnToolsVersion = 26.5;
 					};
 				};
@@ -122,12 +176,30 @@
 			projectRoot = "";
 			targets = (
 				B01608A62FE0B2AE00DC870E /* CustomKeyTap */,
+				B0E546602FE5B08500D512CA /* CustomKeyTapTests */,
 			);
 		};
 /* End PBXProject section */
 
+/* Begin PBXResourcesBuildPhase section */
+		B0E5465F2FE5B08500D512CA /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		B01608A32FE0B2AE00DC870E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B0E5465D2FE5B08500D512CA /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -277,6 +349,41 @@
 			};
 			name = Release;
 		};
+		B0E546662FE5B08500D512CA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.shoestringresearch.CustomKeyTapTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		B0E546672FE5B08500D512CA /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_TESTABILITY = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.shoestringresearch.CustomKeyTapTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -294,6 +401,15 @@
 			buildConfigurations = (
 				B01608AF2FE0B2AE00DC870E /* Debug */,
 				B01608B02FE0B2AE00DC870E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B0E546652FE5B08500D512CA /* Build configuration list for PBXNativeTarget "CustomKeyTapTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B0E546662FE5B08500D512CA /* Debug */,
+				B0E546672FE5B08500D512CA /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

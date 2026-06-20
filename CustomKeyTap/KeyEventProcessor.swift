@@ -59,7 +59,7 @@ let layerKeys: [Int64: LayerKey] = [
   
   // Caps lock. This entry is only used as a marker. It does
   // not produce key events.
-  Int64(kVK_CapsLock): LayerKey(kVK_CapsLock, CGEventFlags()),
+  Int64(kVK_Delete): LayerKey(kVK_CapsLock, CGEventFlags()),
 ]
 
 let capsWordKeyCode = Int64(kVK_Delete)
@@ -161,6 +161,14 @@ class KeyEventProcessor {
           .layer
         pending[eventCode] = press
       }
+      
+      // Reset caps word at the end of a "word" (letters, numbers
+      // underscore). In addition, backspace and delete do not reset
+      // caps word.
+      if !capsWordTargets.contains(eventCode) &&
+         !capsWordNeutral.contains(eventCode) {
+        isCapsWordActive = false
+      }
     } else if event.type == .keyUp {
       // A keyUp event resolves all pending key actions. A pending press
       // before the key was pressed is a hold, otherwise it is a tap.
@@ -183,18 +191,21 @@ class KeyEventProcessor {
       // Process pressed keys in the order they were pressed to build
       // the modifier and layer state for taps.
       var flags: UInt64 = 0
+      var isLayerActive = false
       for (pressCode, press) in pressed.sorted(by: { $0.value.event.timestamp < $1.value.event.timestamp }) {
         if press.action == .modifier {
           flags |= homeRowConfigs[pressCode]!.flags
+        } else if press.action == .layer {
+          isLayerActive = true
         } else if !press.posted {
-          if press.action == .layer, let layerKey = layerKeys[pressCode] {
+          if isLayerActive, let layerKey = layerKeys[pressCode] {
             if (layerKey.code == Int64(kVK_CapsLock)) {
               isCapsWordActive = !isCapsWordActive
             } else {
               postTap(
                 keyCode: layerKey.code,
                 flags: press.event.flags.rawValue | layerKey.flags | flags)
-                  }
+            }
           } else {
             // Use flags from the original event, plus our modifiers.
             postTap(
@@ -208,10 +219,6 @@ class KeyEventProcessor {
       if event.type == .keyUp {
         pressed.removeValue(forKey: eventCode)
       }
-    }
-    
-    if capsWordTargets.contains(eventCode) || capsWordNeutral.contains(eventCode) {
-      isCapsWordActive = false
     }
     
     return nil
@@ -239,9 +246,10 @@ class KeyEventProcessor {
   }
   
   func postTap(keyCode: Int64, flags: UInt64) {
-    let capsWordFlags = isCapsWordActive && capsWordTargets.contains(keyCode) ?
-      CGEventFlags.maskShift.rawValue :
-      0
+    var capsWordFlags: UInt64 = 0
+    if isCapsWordActive && capsWordTargets.contains(keyCode) {
+      capsWordFlags = CGEventFlags.maskShift.rawValue
+    }
     
     // Generate key tap press and release.
     for isDown in [true, false] {

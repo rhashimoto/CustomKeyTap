@@ -184,6 +184,7 @@ class KeyEventProcessor {
         // TODO: output warning
       }
     } else {
+      isCapsWordActive = false
       return event
     }
     

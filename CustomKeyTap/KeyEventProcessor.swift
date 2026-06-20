@@ -2,23 +2,14 @@ import Foundation
 import CoreGraphics
 import Carbon
 
-struct HomeRowConfig {
-  // CGEventFlags for a modifier.
-  let flags: UInt64
-  
-  init(_ flags: CGEventFlags) {
-    self.flags = flags.rawValue
-  }
-}
-
-// Mapping from the home row keycode to its associated modifier.
-let homeRowConfigs: [Int64: HomeRowConfig] = [
-  Int64(kVK_ANSI_S): HomeRowConfig(.maskCommand),
-  Int64(kVK_ANSI_D): HomeRowConfig(.maskAlternate),
-  Int64(kVK_ANSI_F): HomeRowConfig(.maskControl),
-  Int64(kVK_ANSI_J): HomeRowConfig(.maskControl),
-  Int64(kVK_ANSI_K): HomeRowConfig(.maskAlternate),
-  Int64(kVK_ANSI_L): HomeRowConfig(.maskCommand),
+// Mapping from the home row keycode to its associated modifier flags.
+let homeRowConfigs: [Int64: UInt64] = [
+  Int64(kVK_ANSI_S): CGEventFlags.maskCommand.rawValue,
+  Int64(kVK_ANSI_D): CGEventFlags.maskAlternate.rawValue,
+  Int64(kVK_ANSI_F): CGEventFlags.maskControl.rawValue,
+  Int64(kVK_ANSI_J): CGEventFlags.maskControl.rawValue,
+  Int64(kVK_ANSI_K): CGEventFlags.maskAlternate.rawValue,
+  Int64(kVK_ANSI_L): CGEventFlags.maskCommand.rawValue,
 ]
 
 let layerKeyCode = Int64(kVK_Space)
@@ -195,7 +186,7 @@ class KeyEventProcessor {
       var isLayerActive = false
       for (pressCode, press) in pressed.sorted(by: { $0.value.event.timestamp < $1.value.event.timestamp }) {
         if press.action == .modifier {
-          flags |= homeRowConfigs[pressCode]!.flags
+          flags |= homeRowConfigs[pressCode]!
         } else if press.action == .layer {
           isLayerActive = true
         } else if !press.posted {

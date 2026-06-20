@@ -105,7 +105,8 @@ class KeyEventProcessor {
   var flowNanos: UInt64 = 100 * 1_000_000
 
   var lastTapTime: UInt64 = 0
-  var pending: [CGKeyCode: KeyPress] = [:]
+  // All currently-held keys. The action distinguishes still-undecided
+  // (.pending) presses from those resolved as .tap, .modifier, or .layer.
   var pressed: [CGKeyCode: KeyPress] = [:]
   let post: (CGEvent) -> Void
 
@@ -127,17 +128,17 @@ class KeyEventProcessor {
     let eventCode = CGKeyCode(event.getIntegerValueField(.keyboardEventKeycode))
 
     // Check whether enough time has passed to establish holds.
-    for (pressCode, var press) in pending {
+    for code in pressed.keys {
+      guard let press = pressed[code], press.action == .pending else { continue }
       if event.timestamp - press.event.timestamp > holdNanos {
-        resolvePendingHold(pressCode, &press)
+        pressed[code]?.action = resolvedHoldAction(for: code)
       }
     }
 
     if event.type == .keyDown {
       var press = KeyPress(event: event)
-      if pending.keys.contains(eventCode) ||
-         pressed[eventCode]?.action == .modifier ||
-         pressed[eventCode]?.action == .layer {
+      if let action = pressed[eventCode]?.action,
+         action == .pending || action == .modifier || action == .layer {
         // Ignore key repeat for possible modifier/layer holds.
       } else if !isTapHold(eventCode) ||
          isFlowTap(event) ||
@@ -146,10 +147,8 @@ class KeyEventProcessor {
         pressed[eventCode] = press
       } else {
         // Defer until we can distinguish tap or hold behavior.
-        press.action = homeRowConfigs.keys.contains(eventCode) ?
-          .modifier :
-          .layer
-        pending[eventCode] = press
+        press.action = .pending
+        pressed[eventCode] = press
       }
 
       // Reset caps word at the end of a "word" (letters, numbers
@@ -162,12 +161,14 @@ class KeyEventProcessor {
     } else if event.type == .keyUp {
       // A keyUp event resolves all pending key actions. A pending press
       // before the key was pressed is a hold, otherwise it is a tap.
-      if let keyPress = pending[eventCode] ?? pressed[eventCode] {
-        for (pendingCode, var pendingPress) in pending {
+      if let keyPress = pressed[eventCode] {
+        for code in pressed.keys {
+          guard let pendingPress = pressed[code],
+                pendingPress.action == .pending else { continue }
           if pendingPress.event.timestamp < keyPress.event.timestamp {
-            resolvePendingHold(pendingCode, &pendingPress)
+            pressed[code]?.action = resolvedHoldAction(for: code)
           } else {
-            resolvePendingTap(pendingCode, &pendingPress)
+            pressed[code]?.action = .tap
           }
         }
       } else {
@@ -178,8 +179,9 @@ class KeyEventProcessor {
       return event
     }
 
-    if pending.isEmpty {
-      // Process pressed keys in the order they were pressed to build
+    let hasPending = pressed.values.contains(where: { $0.action == .pending })
+    if !hasPending {
+      // Process resolved keys in the order they were pressed to build
       // the modifier and layer state for taps.
       var flags: CGEventFlags = []
       var isLayerActive = false
@@ -203,7 +205,7 @@ class KeyEventProcessor {
             postTap(
               keyCode: pressCode,
               flags: press.event.flags.union(flags))
-              lastTapTime = press.event.timestamp
+            lastTapTime = press.event.timestamp
           }
           pressed[pressCode]?.posted = true
         }
@@ -217,15 +219,8 @@ class KeyEventProcessor {
     return nil
   }
 
-  func resolvePendingHold(_ keyCode: CGKeyCode, _ press: inout KeyPress) {
-    pressed[keyCode] = press
-    pending.removeValue(forKey: keyCode)
-  }
-
-  func resolvePendingTap(_ keyCode: CGKeyCode, _ press: inout KeyPress) {
-    press.action = .tap
-    pressed[keyCode] = press
-    pending.removeValue(forKey: keyCode)
+  func resolvedHoldAction(for keyCode: CGKeyCode) -> KeyAction {
+    return homeRowConfigs.keys.contains(keyCode) ? .modifier : .layer
   }
 
   func isTapHold(_ keyCode: CGKeyCode) -> Bool {
@@ -257,14 +252,16 @@ class KeyEventProcessor {
 
   func isRepeatedTap(_ keyCode: CGKeyCode, _ event: CGEvent) -> Bool {
     assert(event.type == .keyDown)
-    if let press = pressed[keyCode] {
-      return pressed.count == 1 && press.action == .tap
+    if let press = pressed[keyCode], press.action == .tap {
+      let resolvedCount = pressed.values.filter { $0.action != .pending }.count
+      return resolvedCount == 1
     }
     return false
   }
 }
 
 enum KeyAction {
+  case pending
   case tap
   case modifier
   case layer

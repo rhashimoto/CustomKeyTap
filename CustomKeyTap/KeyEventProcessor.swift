@@ -3,54 +3,54 @@ import CoreGraphics
 import Carbon
 
 // Mapping from the home row keycode to its associated modifier flags.
-let homeRowConfigs: [CGKeyCode: UInt64] = [
-  CGKeyCode(kVK_ANSI_S): CGEventFlags.maskCommand.rawValue,
-  CGKeyCode(kVK_ANSI_D): CGEventFlags.maskAlternate.rawValue,
-  CGKeyCode(kVK_ANSI_F): CGEventFlags.maskControl.rawValue,
-  CGKeyCode(kVK_ANSI_J): CGEventFlags.maskControl.rawValue,
-  CGKeyCode(kVK_ANSI_K): CGEventFlags.maskAlternate.rawValue,
-  CGKeyCode(kVK_ANSI_L): CGEventFlags.maskCommand.rawValue,
+let homeRowConfigs: [CGKeyCode: CGEventFlags] = [
+  CGKeyCode(kVK_ANSI_S): .maskCommand,
+  CGKeyCode(kVK_ANSI_D): .maskAlternate,
+  CGKeyCode(kVK_ANSI_F): .maskControl,
+  CGKeyCode(kVK_ANSI_J): .maskControl,
+  CGKeyCode(kVK_ANSI_K): .maskAlternate,
+  CGKeyCode(kVK_ANSI_L): .maskCommand,
 ]
 
 let layerKeyCode = CGKeyCode(kVK_Space)
 
 struct LayerKey {
   let code: CGKeyCode
-  let flags: UInt64
+  let flags: CGEventFlags
 
-  init(_ virtualKeyCode: Int, _ flags: CGEventFlags) {
+  init(_ virtualKeyCode: Int, _ flags: CGEventFlags = []) {
     self.code = CGKeyCode(virtualKeyCode)
-    self.flags = flags.rawValue
+    self.flags = flags
   }
 }
 
 let layerKeys: [CGKeyCode: LayerKey] = [
-  CGKeyCode(kVK_ANSI_Z): LayerKey(kVK_ANSI_Z, CGEventFlags.maskCommand),
-  CGKeyCode(kVK_ANSI_X): LayerKey(kVK_ANSI_X, CGEventFlags.maskCommand),
-  CGKeyCode(kVK_ANSI_C): LayerKey(kVK_ANSI_C, CGEventFlags.maskCommand),
-  CGKeyCode(kVK_ANSI_V): LayerKey(kVK_ANSI_V, CGEventFlags.maskCommand),
+  CGKeyCode(kVK_ANSI_Z): LayerKey(kVK_ANSI_Z, .maskCommand),
+  CGKeyCode(kVK_ANSI_X): LayerKey(kVK_ANSI_X, .maskCommand),
+  CGKeyCode(kVK_ANSI_C): LayerKey(kVK_ANSI_C, .maskCommand),
+  CGKeyCode(kVK_ANSI_V): LayerKey(kVK_ANSI_V, .maskCommand),
 
   // Navigation keys
-  CGKeyCode(kVK_ANSI_Q): LayerKey(kVK_Home, CGEventFlags()),
-  CGKeyCode(kVK_ANSI_W): LayerKey(kVK_PageUp, CGEventFlags()),
-  CGKeyCode(kVK_ANSI_E): LayerKey(kVK_PageDown, CGEventFlags()),
-  CGKeyCode(kVK_ANSI_R): LayerKey(kVK_End, CGEventFlags()),
+  CGKeyCode(kVK_ANSI_Q): LayerKey(kVK_Home),
+  CGKeyCode(kVK_ANSI_W): LayerKey(kVK_PageUp),
+  CGKeyCode(kVK_ANSI_E): LayerKey(kVK_PageDown),
+  CGKeyCode(kVK_ANSI_R): LayerKey(kVK_End),
 
   // Vim navigation
-  CGKeyCode(kVK_ANSI_H): LayerKey(kVK_LeftArrow, CGEventFlags()),
-  CGKeyCode(kVK_ANSI_J): LayerKey(kVK_DownArrow, CGEventFlags()),
-  CGKeyCode(kVK_ANSI_K): LayerKey(kVK_UpArrow, CGEventFlags()),
-  CGKeyCode(kVK_ANSI_L): LayerKey(kVK_RightArrow, CGEventFlags()),
+  CGKeyCode(kVK_ANSI_H): LayerKey(kVK_LeftArrow),
+  CGKeyCode(kVK_ANSI_J): LayerKey(kVK_DownArrow),
+  CGKeyCode(kVK_ANSI_K): LayerKey(kVK_UpArrow),
+  CGKeyCode(kVK_ANSI_L): LayerKey(kVK_RightArrow),
 
   // Emacs line navigation
-  CGKeyCode(kVK_ANSI_A): LayerKey(kVK_ANSI_A, CGEventFlags.maskControl),
-  CGKeyCode(kVK_ANSI_S): LayerKey(kVK_ANSI_B, CGEventFlags.maskAlternate),
-  CGKeyCode(kVK_ANSI_D): LayerKey(kVK_ANSI_F, CGEventFlags.maskAlternate),
-  CGKeyCode(kVK_ANSI_F): LayerKey(kVK_ANSI_E, CGEventFlags.maskControl),
+  CGKeyCode(kVK_ANSI_A): LayerKey(kVK_ANSI_A, .maskControl),
+  CGKeyCode(kVK_ANSI_S): LayerKey(kVK_ANSI_B, .maskAlternate),
+  CGKeyCode(kVK_ANSI_D): LayerKey(kVK_ANSI_F, .maskAlternate),
+  CGKeyCode(kVK_ANSI_F): LayerKey(kVK_ANSI_E, .maskControl),
 
   // Caps lock. This entry is only used as a marker. It does
   // not produce key events.
-  CGKeyCode(kVK_Delete): LayerKey(kVK_CapsLock, CGEventFlags()),
+  CGKeyCode(kVK_Delete): LayerKey(kVK_CapsLock),
 ]
 
 let capsWordKeyCode = CGKeyCode(kVK_Delete)
@@ -182,11 +182,11 @@ class KeyEventProcessor {
     if pending.isEmpty {
       // Process pressed keys in the order they were pressed to build
       // the modifier and layer state for taps.
-      var flags: UInt64 = 0
+      var flags: CGEventFlags = []
       var isLayerActive = false
       for (pressCode, press) in pressed.sorted(by: { $0.value.event.timestamp < $1.value.event.timestamp }) {
         if press.action == .modifier {
-          flags |= homeRowConfigs[pressCode]!
+          flags.formUnion(homeRowConfigs[pressCode]!)
         } else if press.action == .layer {
           isLayerActive = true
         } else if !press.posted {
@@ -196,13 +196,13 @@ class KeyEventProcessor {
             } else {
               postTap(
                 keyCode: layerKey.code,
-                flags: press.event.flags.rawValue | layerKey.flags | flags)
+                flags: press.event.flags.union(layerKey.flags).union(flags))
             }
           } else {
             // Use flags from the original event, plus our modifiers.
             postTap(
               keyCode: pressCode,
-              flags: press.event.flags.rawValue | flags)
+              flags: press.event.flags.union(flags))
           }
           pressed[pressCode]?.posted = true
         }
@@ -237,10 +237,10 @@ class KeyEventProcessor {
     return event.timestamp - lastTapTime < flowNanos
   }
 
-  func postTap(keyCode: CGKeyCode, flags: UInt64) {
-    var capsWordFlags: UInt64 = 0
+  func postTap(keyCode: CGKeyCode, flags: CGEventFlags) {
+    var capsWordFlags: CGEventFlags = []
     if isCapsWordActive && capsWordTargets.contains(keyCode) {
-      capsWordFlags = CGEventFlags.maskShift.rawValue
+      capsWordFlags = .maskShift
     }
 
     // Generate key tap press and release.
@@ -249,7 +249,7 @@ class KeyEventProcessor {
         keyboardEventSource: nil,
         virtualKey: keyCode,
         keyDown: isDown)!
-      syntheticEvent.flags = CGEventFlags(rawValue: flags | capsWordFlags)
+      syntheticEvent.flags = flags.union(capsWordFlags)
       post(syntheticEvent)
     }
   }

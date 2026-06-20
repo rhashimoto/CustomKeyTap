@@ -1,6 +1,7 @@
 import Foundation
 import CoreGraphics
 import Carbon
+import OrderedCollections
 
 // Mapping from the home row keycode to its associated modifier flags.
 let homeRowConfigs: [CGKeyCode: CGEventFlags] = [
@@ -107,7 +108,7 @@ class KeyEventProcessor {
   var lastTapTime: UInt64 = 0
   // All currently-held keys. The action distinguishes still-undecided
   // (.pending) presses from those resolved as .tap, .modifier, or .layer.
-  var pressed: [CGKeyCode: KeyPress] = [:]
+  var pressed: OrderedDictionary<CGKeyCode, KeyPress> = [:]
   let post: (CGEvent) -> Void
 
   var isCapsWordActive: Bool = false
@@ -137,13 +138,15 @@ class KeyEventProcessor {
 
     if event.type == .keyDown {
       var press = KeyPress(event: event)
-      if let action = pressed[eventCode]?.action,
-         action == .pending || action == .modifier || action == .layer {
+      if let action = pressed[eventCode]?.action, action != .tap {
         // Ignore key repeat for possible modifier/layer holds.
       } else if !isTapHold(eventCode) ||
          isFlowTap(event) ||
          isRepeatedTap(eventCode, event) {
         // We can already classify this as a tap.
+        // Remove any existing entry so the new press is appended at the end,
+        // preserving press order for iteration.
+        pressed.removeValue(forKey: eventCode)
         pressed[eventCode] = press
       } else {
         // Defer until we can distinguish tap or hold behavior.
@@ -185,7 +188,7 @@ class KeyEventProcessor {
       // the modifier and layer state for taps.
       var flags: CGEventFlags = []
       var isLayerActive = false
-      for (pressCode, press) in pressed.sorted(by: { $0.value.event.timestamp < $1.value.event.timestamp }) {
+      for (pressCode, press) in pressed {
         if press.action == .modifier {
           flags.formUnion(homeRowConfigs[pressCode]!)
         } else if press.action == .layer {

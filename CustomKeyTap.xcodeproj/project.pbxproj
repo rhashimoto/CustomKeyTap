@@ -6,6 +6,11 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		B0B5790E2FE6E0860094281F /* OrderedCollections in Frameworks */ = {isa = PBXBuildFile; productRef = B0B5790D2FE6E0860094281F /* OrderedCollections */; };
+		B0B579102FE6E13B0094281F /* OrderedCollections in Frameworks */ = {isa = PBXBuildFile; productRef = B0B5790F2FE6E13B0094281F /* OrderedCollections */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXCopyFilesBuildPhase section */
 		B01608A52FE0B2AE00DC870E /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
@@ -55,6 +60,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B0B5790E2FE6E0860094281F /* OrderedCollections in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -62,6 +68,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B0B579102FE6E13B0094281F /* OrderedCollections in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -114,6 +121,7 @@
 			);
 			name = CustomKeyTap;
 			packageProductDependencies = (
+				B0B5790D2FE6E0860094281F /* OrderedCollections */,
 			);
 			productName = CustomKeyTap;
 			productReference = B01608A72FE0B2AE00DC870E /* CustomKeyTap */;
@@ -136,6 +144,7 @@
 			);
 			name = CustomKeyTapTests;
 			packageProductDependencies = (
+				B0B5790F2FE6E13B0094281F /* OrderedCollections */,
 			);
 			productName = CustomKeyTapTests;
 			productReference = B0E546612FE5B08500D512CA /* CustomKeyTapTests.xctest */;
@@ -169,6 +178,7 @@
 			mainGroup = B016089E2FE0B2AE00DC870E;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
+				B0B5790C2FE6E0860094281F /* XCRemoteSwiftPackageReference "swift-collections" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = B01608A82FE0B2AE00DC870E /* Products */;
@@ -415,6 +425,30 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		B0B5790C2FE6E0860094281F /* XCRemoteSwiftPackageReference "swift-collections" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apple/swift-collections.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.6.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		B0B5790D2FE6E0860094281F /* OrderedCollections */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B0B5790C2FE6E0860094281F /* XCRemoteSwiftPackageReference "swift-collections" */;
+			productName = OrderedCollections;
+		};
+		B0B5790F2FE6E13B0094281F /* OrderedCollections */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B0B5790C2FE6E0860094281F /* XCRemoteSwiftPackageReference "swift-collections" */;
+			productName = OrderedCollections;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = B016089F2FE0B2AE00DC870E /* Project object */;
 }

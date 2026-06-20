@@ -53,7 +53,6 @@ let layerKeys: [CGKeyCode: LayerKey] = [
   CGKeyCode(kVK_Delete): LayerKey(kVK_CapsLock),
 ]
 
-let capsWordKeyCode = CGKeyCode(kVK_Delete)
 let capsWordTargets: Set<CGKeyCode> = [
   CGKeyCode(kVK_ANSI_A),
   CGKeyCode(kVK_ANSI_B),
@@ -191,18 +190,20 @@ class KeyEventProcessor {
           isLayerActive = true
         } else if !press.posted {
           if isLayerActive, let layerKey = layerKeys[pressCode] {
-            if (layerKey.code == CGKeyCode(kVK_CapsLock)) {
+            if layerKey.code == CGKeyCode(kVK_CapsLock) {
               isCapsWordActive = !isCapsWordActive
             } else {
               postTap(
                 keyCode: layerKey.code,
                 flags: press.event.flags.union(layerKey.flags).union(flags))
+              lastTapTime = press.event.timestamp
             }
           } else {
             // Use flags from the original event, plus our modifiers.
             postTap(
               keyCode: pressCode,
               flags: press.event.flags.union(flags))
+              lastTapTime = press.event.timestamp
           }
           pressed[pressCode]?.posted = true
         }

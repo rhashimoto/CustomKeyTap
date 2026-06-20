@@ -5,10 +5,14 @@ import Carbon
 // Tag for injected events to bypass processing.
 let postedEventTag: Int64 = 0xDEADBEEF
 
+var verboseLogging = false
+
 // Event tap callback
 func myEventTapCallback(proxy: CGEventTapProxy, type: CGEventType, event: CGEvent, refcon: UnsafeMutableRawPointer?) -> Unmanaged<CGEvent>? {
-  print(serializeEvent(event))
-  fflush(stdout)
+  if verboseLogging {
+    print(serializeEvent(event))
+    fflush(stdout)
+  }
 
   // Skip events we injected.
   let userData = event.getIntegerValueField(.eventSourceUserData)
@@ -39,6 +43,7 @@ func main() {
   let args = Array(CommandLine.arguments.dropFirst())
   let holdMillis = parseMillisOption("--hold", args)
   let flowMillis = parseMillisOption("--flow", args)
+  verboseLogging = args.contains("-v")
 
   let eventMask = (1 << CGEventType.keyDown.rawValue) |
   (1 << CGEventType.keyUp.rawValue) |

@@ -3,7 +3,10 @@ import CoreGraphics
 import Carbon
 import OrderedCollections
 
-// Mapping from the home row keycode to its associated modifier flags.
+// KeyEventProcessor enables tap-hold behavior, which allows keys to
+// have one behavior when quickly tapped and released, and another
+// behavior when held down. Here we configure some home row keys to
+// act like modifier keys when held down.
 let homeRowConfigs: [CGKeyCode: CGEventFlags] = [
   CGKeyCode(kVK_ANSI_S): .maskCommand,
   CGKeyCode(kVK_ANSI_D): .maskAlternate,
@@ -13,8 +16,10 @@ let homeRowConfigs: [CGKeyCode: CGEventFlags] = [
   CGKeyCode(kVK_ANSI_L): .maskCommand,
 ]
 
+// A different tap-hold scheme, instead of applying a modifier, is to
+// arbitrarily redefine both key and modifier. This called an overlay
+// or a layer. KeyEventProcessor supports a single such layer.
 let layerKeyCode = CGKeyCode(kVK_Space)
-
 struct LayerKey {
   let code: CGKeyCode
   let flags: CGEventFlags
@@ -26,34 +31,43 @@ struct LayerKey {
 }
 
 let layerKeys: [CGKeyCode: LayerKey] = [
+  // Standard editing shortcuts.
   CGKeyCode(kVK_ANSI_Z): LayerKey(kVK_ANSI_Z, .maskCommand),
   CGKeyCode(kVK_ANSI_X): LayerKey(kVK_ANSI_X, .maskCommand),
   CGKeyCode(kVK_ANSI_C): LayerKey(kVK_ANSI_C, .maskCommand),
   CGKeyCode(kVK_ANSI_V): LayerKey(kVK_ANSI_V, .maskCommand),
 
-  // Navigation keys
+  // Navigation keys.
   CGKeyCode(kVK_ANSI_Q): LayerKey(kVK_Home),
   CGKeyCode(kVK_ANSI_W): LayerKey(kVK_PageUp),
   CGKeyCode(kVK_ANSI_E): LayerKey(kVK_PageDown),
   CGKeyCode(kVK_ANSI_R): LayerKey(kVK_End),
 
-  // Vim navigation
+  // Vim navigation.
   CGKeyCode(kVK_ANSI_H): LayerKey(kVK_LeftArrow),
   CGKeyCode(kVK_ANSI_J): LayerKey(kVK_DownArrow),
   CGKeyCode(kVK_ANSI_K): LayerKey(kVK_UpArrow),
   CGKeyCode(kVK_ANSI_L): LayerKey(kVK_RightArrow),
 
-  // Emacs line navigation
+  // Emacs line navigation. The mappings here are strange because
+  // they assume the Colemak key mapping is applied afterwards.
   CGKeyCode(kVK_ANSI_A): LayerKey(kVK_ANSI_A, .maskControl),
   CGKeyCode(kVK_ANSI_S): LayerKey(kVK_ANSI_B, .maskAlternate),
-  CGKeyCode(kVK_ANSI_D): LayerKey(kVK_ANSI_F, .maskAlternate),
-  CGKeyCode(kVK_ANSI_F): LayerKey(kVK_ANSI_E, .maskControl),
+  CGKeyCode(kVK_ANSI_D): LayerKey(kVK_ANSI_E, .maskAlternate),
+  CGKeyCode(kVK_ANSI_F): LayerKey(kVK_ANSI_K, .maskControl),
 
-  // Caps lock. This entry is only used as a marker. It does
-  // not produce key events.
+  // This entry is only used as a marker. It does not produce key events.
+  // This is a special case KeyEventProcessor uses to implement
+  // Caps Word.
   CGKeyCode(kVK_Delete): LayerKey(kVK_CapsLock),
 ]
 
+// Caps Word is a smart caps lock that automatically deactivates
+// itself at the end of a word. It also treats the hyphen key
+// as underscore, which makes typing programming constants
+// easier. The targets here are the keys that Caps Word
+// capitalizes.
+// https://docs.qmk.fm/features/caps_word
 let capsWordTargets: Set<CGKeyCode> = [
   CGKeyCode(kVK_ANSI_A),
   CGKeyCode(kVK_ANSI_B),
@@ -83,6 +97,9 @@ let capsWordTargets: Set<CGKeyCode> = [
   CGKeyCode(kVK_ANSI_Z),
   CGKeyCode(kVK_ANSI_Minus)
 ]
+
+// These are keys that Caps Word does not capitalize but they
+// do not terminate Caps Word.
 let capsWordNeutral: Set<CGKeyCode> = [
   CGKeyCode(kVK_ANSI_0),
   CGKeyCode(kVK_ANSI_1),
@@ -99,16 +116,18 @@ let capsWordNeutral: Set<CGKeyCode> = [
 ]
 
 class KeyEventProcessor {
+  // A tap-hold key held for at least this many nanoseconds is considered
+  // to be held.
   var holdNanos: UInt64 = 235 * 1_000_000
 
   // Any keypress less than this many nanoseconds after the last tap
   // is another tap, not a hold.
   var flowNanos: UInt64 = 150 * 1_000_000
-
-  var lastTapTime: UInt64 = 0
-  // All currently-held keys. The action distinguishes still-undecided
-  // (.pending) presses from those resolved as .tap, .modifier, or .layer.
+  var flowTapTime: UInt64 = 0
+  
+  // All currently-held keys.
   var pressed: OrderedDictionary<CGKeyCode, KeyPress> = [:]
+  
   let post: (CGEvent) -> Void
 
   var isCapsWordActive: Bool = false
@@ -201,14 +220,14 @@ class KeyEventProcessor {
               postTap(
                 keyCode: layerKey.code,
                 flags: press.event.flags.union(layerKey.flags).union(flags))
-              lastTapTime = press.event.timestamp
+              flowTapTime = press.event.timestamp
             }
           } else {
             // Use flags from the original event, plus our modifiers.
             postTap(
               keyCode: pressCode,
               flags: press.event.flags.union(flags))
-            lastTapTime = press.event.timestamp
+            flowTapTime = press.event.timestamp
           }
           pressed[pressCode]?.posted = true
         }
@@ -222,20 +241,25 @@ class KeyEventProcessor {
     return nil
   }
 
+  // Returns the tap-hold type.
   func resolvedHoldAction(for keyCode: CGKeyCode) -> KeyAction {
     return homeRowConfigs.keys.contains(keyCode) ? .modifier : .layer
   }
 
+  // Returns true if keyCode is a tap-hold key.
   func isTapHold(_ keyCode: CGKeyCode) -> Bool {
     return keyCode == layerKeyCode
       || homeRowConfigs.keys.contains(keyCode)
   }
 
+  // Returns true if key should be considered a tap because it quickly
+  // follows another tap.
   func isFlowTap(_ event: CGEvent) -> Bool {
     assert(event.type == .keyDown)
-    return event.timestamp - lastTapTime < flowNanos
+    return event.timestamp - flowTapTime < flowNanos
   }
 
+  // Send a synthesized key down/up event pair.
   func postTap(keyCode: CGKeyCode, flags: CGEventFlags) {
     var capsWordFlags: CGEventFlags = []
     if isCapsWordActive && capsWordTargets.contains(keyCode) {
@@ -243,11 +267,11 @@ class KeyEventProcessor {
     }
 
     // Generate key tap press and release.
-    for isDown in [true, false] {
+    for keyDown in [true, false] {
       let syntheticEvent = CGEvent(
         keyboardEventSource: nil,
         virtualKey: keyCode,
-        keyDown: isDown)!
+        keyDown: keyDown)!
       syntheticEvent.flags = flags.union(capsWordFlags)
       post(syntheticEvent)
     }

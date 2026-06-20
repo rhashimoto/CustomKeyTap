@@ -57,4 +57,44 @@ struct KeyEventProcessorTests {
     #expect(posted[1].getIntegerValueField(.keyboardEventKeycode) == aKeyCode)
     #expect(posted[1].flags.contains(.maskControl))
   }
+  
+  @Test("Quick double tap and hold sends a repeat")
+  func doubleTapHold_repeats() throws {
+    let processor = makeProcessor()
+    let input = """
+    2026-06-20T09:39:56.284-07:00|keyDown|keyCode:Space(49), flags:0x100, userData:0
+    2026-06-20T09:39:56.361-07:00|keyUp|keyCode:Space(49), flags:0x100, userData:0
+    2026-06-20T09:39:56.427-07:00|keyDown|keyCode:Space(49), flags:0x100, userData:0
+    2026-06-20T09:39:56.927-07:00|keyDown|keyCode:Space(49), flags:0x100, userData:0
+    2026-06-20T09:39:57.010-07:00|keyDown|keyCode:Space(49), flags:0x100, userData:0
+    2026-06-20T09:39:57.093-07:00|keyUp|keyCode:Space(49), flags:0x100, userData:0
+    """
+
+    let posted = process(objectUnderTest: processor, inputEvents: input)
+
+    try #require(posted.count == 8)
+
+    let spaceKeyCode = Int64(kVK_Space)
+
+    #expect(posted[0].type == .keyDown)
+    #expect(posted[0].getIntegerValueField(.keyboardEventKeycode) == spaceKeyCode)
+    #expect(posted[1].type == .keyUp)
+    #expect(posted[1].getIntegerValueField(.keyboardEventKeycode) == spaceKeyCode)
+
+    #expect(posted[2].type == .keyDown)
+    #expect(posted[2].getIntegerValueField(.keyboardEventKeycode) == spaceKeyCode)
+    #expect(posted[3].type == .keyUp)
+    #expect(posted[3].getIntegerValueField(.keyboardEventKeycode) == spaceKeyCode)
+
+    #expect(posted[4].type == .keyDown)
+    #expect(posted[4].getIntegerValueField(.keyboardEventKeycode) == spaceKeyCode)
+    #expect(posted[5].type == .keyUp)
+    #expect(posted[5].getIntegerValueField(.keyboardEventKeycode) == spaceKeyCode)
+
+    #expect(posted[6].type == .keyDown)
+    #expect(posted[6].getIntegerValueField(.keyboardEventKeycode) == spaceKeyCode)
+    #expect(posted[7].type == .keyUp)
+    #expect(posted[7].getIntegerValueField(.keyboardEventKeycode) == spaceKeyCode)
+  }
+
 }

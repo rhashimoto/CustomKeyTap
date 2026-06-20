@@ -103,7 +103,7 @@ class KeyEventProcessor {
 
   // Any keypress less than this many nanoseconds after the last tap
   // is another tap, not a hold.
-  var flowNanos: UInt64 = 100 * 1_000_000
+  var flowNanos: UInt64 = 150 * 1_000_000
 
   var lastTapTime: UInt64 = 0
   // All currently-held keys. The action distinguishes still-undecided

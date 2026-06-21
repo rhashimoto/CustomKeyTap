@@ -44,10 +44,12 @@ let layerKeys: [CGKeyCode: LayerKey] = [
   CGKeyCode(kVK_ANSI_R): LayerKey(kVK_End),
 
   // Vim navigation.
-  CGKeyCode(kVK_ANSI_H): LayerKey(kVK_LeftArrow),
-  CGKeyCode(kVK_ANSI_J): LayerKey(kVK_DownArrow),
-  CGKeyCode(kVK_ANSI_K): LayerKey(kVK_UpArrow),
-  CGKeyCode(kVK_ANSI_L): LayerKey(kVK_RightArrow),
+  // The flags are needed to make Spaces navigation work, but I do not
+  // understand why.
+  CGKeyCode(kVK_ANSI_H): LayerKey(kVK_LeftArrow, CGEventFlags(rawValue: 0x00a00000)),
+  CGKeyCode(kVK_ANSI_J): LayerKey(kVK_DownArrow, CGEventFlags(rawValue: 0x00a00000)),
+  CGKeyCode(kVK_ANSI_K): LayerKey(kVK_UpArrow, CGEventFlags(rawValue: 0x00a00000)),
+  CGKeyCode(kVK_ANSI_L): LayerKey(kVK_RightArrow, CGEventFlags(rawValue: 0x00a00000)),
 
   // Emacs line navigation. The mappings here are strange because
   // they assume the Colemak key mapping is applied afterwards.

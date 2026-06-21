@@ -136,4 +136,28 @@ struct KeyEventProcessorTests {
     #expect(posted[7].getIntegerValueField(.keyboardEventKeycode) == rightArrowKeyCode)
   }
 
+  @Test("Hold modifier + layer key")
+  func mod_layer_combines() throws {
+    let processor = makeProcessor()
+    let input = """
+    2026-06-21T14:54:12.286-07:00|keyDown|keyCode:F(3), flags:0x100, userData:0
+    2026-06-21T14:54:12.416-07:00|keyDown|keyCode:Space(49), flags:0x100, userData:0
+    2026-06-21T14:54:12.643-07:00|keyDown|keyCode:L(37), flags:0x100, userData:0
+    2026-06-21T14:54:12.737-07:00|keyUp|keyCode:L(37), flags:0x100, userData:0
+    """
+
+    let posted = process(objectUnderTest: processor, inputEvents: input)
+
+    try #require(posted.count == 2)
+
+    let rightArrowKeyCode = Int64(kVK_RightArrow)
+
+    #expect(posted[0].type == .keyDown)
+    #expect(posted[0].getIntegerValueField(.keyboardEventKeycode) == rightArrowKeyCode)
+    #expect(posted[0].flags.contains(.maskControl))
+    #expect(posted[1].type == .keyUp)
+    #expect(posted[1].getIntegerValueField(.keyboardEventKeycode) == rightArrowKeyCode)
+    #expect(posted[1].flags.contains(.maskControl))
+  }
+
 }

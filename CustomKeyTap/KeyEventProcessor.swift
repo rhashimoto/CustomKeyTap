@@ -279,11 +279,7 @@ class KeyEventProcessor {
 
   func isRepeatedTap(_ keyCode: CGKeyCode, _ event: CGEvent) -> Bool {
     assert(event.type == .keyDown)
-    if let press = pressed[keyCode], press.action == .tap {
-      let resolvedCount = pressed.values.filter { $0.action != .pending }.count
-      return resolvedCount == 1
-    }
-    return false
+    return pressed[keyCode]?.action == .tap
   }
 }
 

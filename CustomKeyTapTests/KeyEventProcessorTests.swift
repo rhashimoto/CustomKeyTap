@@ -97,4 +97,43 @@ struct KeyEventProcessorTests {
     #expect(posted[7].getIntegerValueField(.keyboardEventKeycode) == spaceKeyCode)
   }
 
+  @Test("Layer+HomeKey repeats")
+  func layer_homekey_repeats() throws {
+    let processor = makeProcessor()
+    let input = """
+    2026-06-20T20:09:00.215-07:00|keyDown|keyCode:Space(49), flags:0x100, userData:0
+    2026-06-20T20:09:01.220-07:00|keyDown|keyCode:L(37), flags:0x100, userData:0
+    2026-06-20T20:09:01.286-07:00|keyUp|keyCode:L(37), flags:0x100, userData:0
+    2026-06-20T20:09:01.364-07:00|keyDown|keyCode:L(37), flags:0x100, userData:0
+    2026-06-20T20:09:01.859-07:00|keyDown|keyCode:L(37), flags:0x100, userData:0
+    2026-06-20T20:09:01.943-07:00|keyDown|keyCode:L(37), flags:0x100, userData:0
+    """
+
+    let posted = process(objectUnderTest: processor, inputEvents: input)
+
+    try #require(posted.count == 8)
+
+    let rightArrowKeyCode = Int64(kVK_RightArrow)
+
+    #expect(posted[0].type == .keyDown)
+    #expect(posted[0].getIntegerValueField(.keyboardEventKeycode) == rightArrowKeyCode)
+    #expect(posted[1].type == .keyUp)
+    #expect(posted[1].getIntegerValueField(.keyboardEventKeycode) == rightArrowKeyCode)
+
+    #expect(posted[2].type == .keyDown)
+    #expect(posted[2].getIntegerValueField(.keyboardEventKeycode) == rightArrowKeyCode)
+    #expect(posted[3].type == .keyUp)
+    #expect(posted[3].getIntegerValueField(.keyboardEventKeycode) == rightArrowKeyCode)
+
+    #expect(posted[4].type == .keyDown)
+    #expect(posted[4].getIntegerValueField(.keyboardEventKeycode) == rightArrowKeyCode)
+    #expect(posted[5].type == .keyUp)
+    #expect(posted[5].getIntegerValueField(.keyboardEventKeycode) == rightArrowKeyCode)
+
+    #expect(posted[6].type == .keyDown)
+    #expect(posted[6].getIntegerValueField(.keyboardEventKeycode) == rightArrowKeyCode)
+    #expect(posted[7].type == .keyUp)
+    #expect(posted[7].getIntegerValueField(.keyboardEventKeycode) == rightArrowKeyCode)
+  }
+
 }

@@ -23,9 +23,19 @@ disable the quarantine bit with:
 
 `xattr -d com.apple.quarantine /path/to/file`
 
-To grant permission to read and write keyboard events, open macOS Privacy &
-Security settings, open the Accessibility section, and add and enable
-the program there.
+Any program that uses a `CGEventTapLocation.cgSessionEventTap` needs
+user permission. To grant this permission, open macOS Privacy & Security
+settings, open the Accessibility section, and enable the parent process
+program there. The first time the CustomKeyTap is run without permission,
+macOS will typically add a disabled entry to Accessibility for the parent process
+program which you can then simply enable, but if not then add it manually.
+The parent process program will be
+Terminal if you run CustomKeyTap from Terminal, but if you start it
+with [launchd](https://developer.apple.com/library/archive/documentation/MacOSX/Conceptual/BPSystemStartup/Chapters/CreatingLaunchdJobs.html) then CustomKeyTap itself will be the parent process. Note that if
+you overwrite your CustomKeyTap with a new version, you may need to
+remove it completely from Accessibility and then re-add and enable
+it to re-establish the permission.
 
-Finally, [create a launch agent](https://developer.apple.com/library/archive/documentation/MacOSX/Conceptual/BPSystemStartup/Chapters/CreatingLaunchdJobs.html)
-to automatically start and run in the background.
+Programs with the Accessibility permission can read most of your user interface inputs,
+including your keystrokes. You should seriously weigh the benefits and
+risks of running software that requires this permission.

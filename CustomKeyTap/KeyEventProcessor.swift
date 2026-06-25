@@ -86,7 +86,8 @@ let capsWordTargets: Set<CGKeyCode> = [
   CGKeyCode(kVK_ANSI_M),
   CGKeyCode(kVK_ANSI_N),
   CGKeyCode(kVK_ANSI_O),
-  CGKeyCode(kVK_ANSI_P),
+//  CGKeyCode(kVK_ANSI_P), // Colemak maps to ;
+  CGKeyCode(kVK_ANSI_Semicolon), // Colemak maps to letter O
   CGKeyCode(kVK_ANSI_Q),
   CGKeyCode(kVK_ANSI_R),
   CGKeyCode(kVK_ANSI_S),

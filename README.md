@@ -39,3 +39,8 @@ it to re-establish the permission.
 Programs with the Accessibility permission can read most of your user interface inputs,
 including your keystrokes. You should seriously weigh the benefits and
 risks of running software that requires this permission.
+
+## Command line build
+`xcodebuild -project CustomKeyTap.xcodeproj -scheme CustomKeyTap -configuration Release build`
+
+Insert the option `-derivedDataPath ./` to build in the project directory.

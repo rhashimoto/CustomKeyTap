@@ -164,7 +164,8 @@ class KeyEventProcessor {
         // Ignore key repeat for possible modifier/layer holds.
       } else if !isTapHold(eventCode) ||
          isFlowTap(event) ||
-         isRepeatedTap(eventCode, event) {
+         isRepeatedTap(eventCode, event) ||
+         isLayerKeyHeld(eventCode) {
         // We can already classify this as a tap.
         // Remove any existing entry so the new press is appended at the end,
         // preserving press order for iteration.
@@ -283,6 +284,14 @@ class KeyEventProcessor {
   func isRepeatedTap(_ keyCode: CGKeyCode, _ event: CGEvent) -> Bool {
     assert(event.type == .keyDown)
     return pressed[keyCode]?.action == .tap
+  }
+
+  // Returns true if the layer key is currently pressed and keyCode is
+  // not already pressed.
+  func isLayerKeyHeld(_ keyCode: CGKeyCode) -> Bool {
+    return keyCode != layerKeyCode
+      && pressed[layerKeyCode] != nil
+      && pressed[keyCode] == nil
   }
 }
 

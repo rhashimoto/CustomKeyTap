@@ -31,6 +31,18 @@ struct LayerKey {
 }
 
 let layerKeys: [CGKeyCode: LayerKey] = [
+  // Number row acts as function keys.
+  CGKeyCode(kVK_ANSI_1): LayerKey(kVK_F1),
+  CGKeyCode(kVK_ANSI_2): LayerKey(kVK_F2),
+  CGKeyCode(kVK_ANSI_3): LayerKey(kVK_F3),
+  CGKeyCode(kVK_ANSI_4): LayerKey(kVK_F4),
+  CGKeyCode(kVK_ANSI_5): LayerKey(kVK_F5),
+  CGKeyCode(kVK_ANSI_6): LayerKey(kVK_F6),
+  CGKeyCode(kVK_ANSI_7): LayerKey(kVK_F7),
+  CGKeyCode(kVK_ANSI_8): LayerKey(kVK_F8),
+  CGKeyCode(kVK_ANSI_9): LayerKey(kVK_F9),
+  CGKeyCode(kVK_ANSI_0): LayerKey(kVK_F10),
+
   // Standard editing shortcuts.
   CGKeyCode(kVK_ANSI_Z): LayerKey(kVK_ANSI_Z, .maskCommand),
   CGKeyCode(kVK_ANSI_X): LayerKey(kVK_ANSI_X, .maskCommand),
